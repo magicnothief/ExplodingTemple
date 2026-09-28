@@ -18,7 +18,8 @@ gradlew.bat run --args="4131000000000 281474976710656 300"      (Windows)
 
 The arguments are the first base seed, the base seed to stop before, how far the temple may be from the world
 spawn in blocks, and optionally the number of threads (all cores by default) and how high up the shaft the
-explosion is assumed to blow the walls open at worst (Y 57 by default, 58 is stricter). Base seeds from about
+explosion is assumed to blow the walls open at worst (Y 57 by default, 58 is stricter, and 55 finds about 4
+times as many temples, which stay dry more often, see the end of [SEEDS.md](SEEDS.md#what-the-finder-checks)). Base seeds from about
 1,856,000,000,000 to 4,131,000,000,000 have been searched already. 281474976710656 is the end of the seed space,
 so the search just runs until you stop it.
 

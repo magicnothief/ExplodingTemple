@@ -116,10 +116,20 @@ Rivers and oceans near the temple change which caves generate, so every result i
 port of the game's own 1.16.1 cave and ravine carvers.
 
 Neither temple above passes all of these, so the current finder skips both. A temple that does pass them
-should be deadly however the TNT goes off, but those are rare. Of 178 temples earlier searches found with a
-ravine under the shaft and a deadly fall, 3 pass, and none of those 3 has a dry ravine and a golem that
-drops as well. The finder checks about 750M base seeds a second on 4 cores, so expect days of searching for
-one within 300 blocks of spawn.
+should be deadly however the TNT goes off, but those are rare, and water rules out even more of them than
+usual: the ravine has to be wide open around the shaft, and springs come out of its walls. Of 183 temples
+searches found with a ravine under the shaft and a deadly fall:
+
+| Shaft blown open up to (fifth argument) | Test explosions that opened it no higher | Temples that pass | With a dry world seed |
+|---|---|---|---|
+| Y 57 (default) | 139 of 140 | 6 | 0 |
+| Y 56 | 136 of 140 | 12 | 0 |
+| Y 55 | 135 of 140 | 23 | 1 |
+
+Across all 183, 32 have a dry world seed. A dry one also needs a golem that drops on the real terrain, which
+about 1 in 17 dry temples had in earlier searches, so with the default expect weeks of searching. 55 finds
+about 4 times as many temples and more of them stay dry, at the cost of not covering 5 of the 140 test
+explosions.
 
 ## Earlier seeds: the temple explodes, but the fall is survivable
 
