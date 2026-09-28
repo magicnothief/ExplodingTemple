@@ -21,8 +21,9 @@ to the shaft.
 Structure seed `365870407928`. Checked `-5290884771359792904` in the vanilla server: it blew up within 5 seconds
 of being loaded, and falling from the temple floor lands on dripstone blocks at Y 22 and 23 in the whole north row
 and the middle column, and on pointed dripstone in the middle of the east and the south row, as predicted. The
-other three columns land on stone or a dripstone pool. The spawn is the real one from that world; for the other
-seeds it is the finder's, which was 7 blocks off here.
+other three columns land on stone or a dripstone pool. `6510798052164591864` checked out the same way, with its
+spawn exactly where the finder put it. The spawns of those two are the real ones; for the other seeds they are the
+finder's, which was 7 blocks off for the first seed.
 
 ## Temple at 26 -998: dripstone under 1 of the shaft's 9 columns
 
