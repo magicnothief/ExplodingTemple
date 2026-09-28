@@ -31,10 +31,10 @@ through about 4 times as many base seeds per second as 1000.
 Each result is printed as it is found and kept in `results.txt`, closest first:
 
 ```
-Got full world seed: 779 blocks | -7221521733626352479 | /tp 26 100 -998 | spawn -40 76 -222 | golem cage Y=63 | dripstone under 1 of the shaft's 9 columns (the closest so far)
+Got full world seed: 224 blocks | -5290884771359792904 | /tp -358 100 234 | spawn -144 60 167 | golem cage Y=63 | dripstone under 6 of the shaft's 9 columns (the closest so far)
 ```
 
-That is the distance from the world spawn to the shaft, the seed, a teleport to the shaft, the world spawn, where
+That is the distance from the world spawn (the finder's estimate, within a few blocks) to the shaft, the seed, a teleport to the shaft, the world spawn, where
 the golem's cage is, and under how many of the shaft's 9 columns a player falling from the temple floor lands on
 dripstone. A new run reads `results.txt` back, so the list stays sorted over stopped and resumed searches. To
 resume, start again at the first base seed plus the count on the last `[progress]` line.
@@ -68,7 +68,7 @@ reports what a player falling down each column of the shaft lands on, and where 
 2. Run it with the seed and the `/tp` x and z (Python 3.8 or newer, and Java 16 or newer for the server):
 
    ```
-   python tools/verify_dripstone.py -7221521733626352479 26 -998 --accept-eula
+   python tools/verify_dripstone.py -5290884771359792904 -358 234 --accept-eula
    ```
 
    `--accept-eula` means you accept the Minecraft EULA (https://aka.ms/MinecraftEULA), which the server needs.
@@ -76,7 +76,7 @@ reports what a player falling down each column of the shaft lands on, and where 
 It takes about a minute and prints a line per column and then
 
 ```
-RESULT seed=-7221521733626352479 shaft=26,-998: exploded=True, dripstone under 1 of the shaft's 9 columns, world spawn -40 76 -222 (779 blocks away), 70s
+RESULT seed=-5290884771359792904 shaft=-358,234: exploded=True, dripstone under 6 of the shaft's 9 columns, world spawn -143 63 174 (223 blocks away), 76s
 ```
 
 In game, break through the blue terracotta in the middle of the temple floor and drop straight down.
@@ -99,6 +99,7 @@ In game, break through the blue terracotta in the middle of the temple floor and
 4. With the whole world seed: the biomes, the real spawn, the outpost built on the real terrain and the game's own
    caves (which skip everything next to water), then the dripstone again with the real biomes.
 
-Two results were checked with `verify_dripstone.py`: both blew up within 5 seconds of being loaded, with dripstone
-under 1 and under 5 of the shaft's columns as predicted or better, and the spawn where the finder said.
+Three results were checked with `verify_dripstone.py`: all blew up within 5 seconds of being loaded, with dripstone
+under 6, 1 and 5 of the shaft's columns where the finder predicted 6, 1 and 4, and the spawn within 10 blocks of
+where the finder put it.
 `research-1.17.1` has the code these checks against the game were made with.

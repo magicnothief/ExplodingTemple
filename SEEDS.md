@@ -9,6 +9,21 @@ Each temple comes with many world seeds that share it (sister seeds): the temple
 dripstone are the same, while the biomes further away and the world spawn differ. Distances are from the world spawn
 to the shaft.
 
+## Temple at -358 234: dripstone under 6 of the shaft's 9 columns
+
+| Seed | World spawn | Distance |
+|---|---|---|
+| `-5290884771359792904` | -143 63 174 | 223 blocks |
+| `6510798052164591864` | -128 68 240 | 230 blocks |
+| `-6252121816826683144` | -128 69 64 | 286 blocks |
+| `-7271342707495968520` | -80 73 128 | 298 blocks |
+
+Structure seed `365870407928`. Checked `-5290884771359792904` in the vanilla server: it blew up within 5 seconds
+of being loaded, and falling from the temple floor lands on dripstone blocks at Y 22 and 23 in the whole north row
+and the middle column, and on pointed dripstone in the middle of the east and the south row, as predicted. The
+other three columns land on stone or a dripstone pool. The spawn is the real one from that world; for the other
+seeds it is the finder's, which was 7 blocks off here.
+
 ## Temple at 26 -998: dripstone under 1 of the shaft's 9 columns
 
 | Seed | World spawn | Distance |
@@ -43,5 +58,6 @@ finder predicted 4.
 
 ## How these were found
 
-`Main 0 281474976710656 1000 4`, the first 5 minutes of a search on 4 cores. The finder lists results in
+The two far ones with `Main 0 281474976710656 1000 4`, the first 5 minutes of a search on 4 cores, and the one at
+-358 234 with `Main 4000000000 281474976710656 300 3` after about 8 minutes on 3 cores. The finder lists results in
 `results.txt`, closest first; these tables are the closest few of each temple.
