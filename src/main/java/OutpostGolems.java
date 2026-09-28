@@ -79,6 +79,25 @@ public final class OutpostGolems {
         return jigsaws;
     }
 
+    // each template's jigsaw blocks rotated around the origin, and how far the expansion hack stretches its box up,
+    // for each rotation
+    private static final int[][][][] ROTATED_JIGSAWS = new int[JIGSAWS.length][4][][];
+    private static final int[][] EXPANSION = new int[SIZE.length][4];
+
+    static {
+        for (int t = 0; t < JIGSAWS.length; t++) {
+            for (int r = 0; r < 4; r++) {
+                int[][] rotated = new int[JIGSAWS[t].length][6];
+                rotatedJigsaws(t, r, null, rotated);
+                ROTATED_JIGSAWS[t][r] = rotated;
+                if (t < SIZE.length) {
+                    int[] b = boundingBox(0, 0, 0, r, SIZE[t]);
+                    EXPANSION[t][r] = b[4] - b[1] + 1 <= 16 ? maxHeight(rotated, rotated.length, b) : 0;
+                }
+            }
+        }
+    }
+
     // at most a base plate, a watchtower, 3 feature plates and 15 features on each
     private static final int MAX_PIECES = 64;
 
@@ -106,7 +125,8 @@ public final class OutpostGolems {
     private final int[] rotations = new int[4];
     private final int[] templates = new int[12];
     private final int[][] jigsaws = new int[16][6];
-    private final int[][] childJigsaws = new int[16][6];
+    private final int[] childOrder = new int[16];
+    private final int[] placedBox = new int[6];
 
     /** Lays out the outpost starting in the chunk on superflat ground, see {@link #layOut(long, int, int, IntBinaryOperator)}. */
     public int layOut(long structureSeed, int chunkX, int chunkZ) {
@@ -237,16 +257,18 @@ public final class OutpostGolems {
                 shuffleRotations();
                 for (int r = 0; r < 4; r++) {
                     int childRotation = rotations[r];
-                    int[] childBox = boundingBox(0, 0, 0, childRotation, size);
-                    int childJigsawCount = rotatedJigsaws(child, childRotation, null, childJigsaws);
-                    shuffle(childJigsaws, childJigsawCount);
-                    int expansion = childBox[4] - childBox[1] + 1 <= 16 ? maxHeight(childJigsaws, childJigsawCount, childBox) : 0;
+                    int[][] childJigsaws = ROTATED_JIGSAWS[child][childRotation];
+                    int childJigsawCount = childJigsaws.length;
+                    // the same draws as shuffling the list itself
+                    for (int k = 0; k < childJigsawCount; k++) childOrder[k] = k;
+                    shuffle(childOrder, childJigsawCount);
+                    int expansion = EXPANSION[child][childRotation];
 
                     for (int k = 0; k < childJigsawCount; k++) {
-                        int[] childJigsaw = childJigsaws[k];
+                        int[] childJigsaw = childJigsaws[childOrder[k]];
                         if (front != opposite(childJigsaw[2]) || jigsaw[1] != childJigsaw[1]) continue;
                         int anchorX = relX - childJigsaw[3], anchorY = relY - childJigsaw[4], anchorZ = relZ - childJigsaw[5];
-                        int[] placedBox = boundingBox(anchorX, anchorY, anchorZ, childRotation, size);
+                        boundingBox(anchorX, anchorY, anchorZ, childRotation, size, placedBox);
                         int k1 = childJigsaw[4];
                         int i2;
                         if (isRigid && POOL_RIGID[pool]) {
@@ -379,13 +401,28 @@ public final class OutpostGolems {
 
     // BlockBox#getBoundingBox with the origin as pivot, returns minX, minY, minZ, maxX, maxY, maxZ
     private static int[] boundingBox(int x, int y, int z, int r, int[] size) {
+        int[] out = new int[6];
+        boundingBox(x, y, z, r, size, out);
+        return out;
+    }
+
+    private static void boundingBox(int x, int y, int z, int r, int[] size, int[] out) {
         int sx = size[0] - 1, sy = size[1] - 1, sz = size[2] - 1;
-        return switch (r) {
-            case 1 -> new int[]{x - sz, y, z, x, y + sy, z + sx};
-            case 2 -> new int[]{x - sx, y, z - sz, x, y + sy, z};
-            case 3 -> new int[]{x, y, z - sx, x + sz, y + sy, z};
-            default -> new int[]{x, y, z, x + sx, y + sy, z + sz};
-        };
+        switch (r) {
+            case 1 -> set(out, x - sz, y, z, x, y + sy, z + sx);
+            case 2 -> set(out, x - sx, y, z - sz, x, y + sy, z);
+            case 3 -> set(out, x, y, z - sx, x + sz, y + sy, z);
+            default -> set(out, x, y, z, x + sx, y + sy, z + sz);
+        }
+    }
+
+    private static void set(int[] b, int x0, int y0, int z0, int x1, int y1, int z1) {
+        b[0] = x0;
+        b[1] = y0;
+        b[2] = z0;
+        b[3] = x1;
+        b[4] = y1;
+        b[5] = z1;
     }
 
     // BlockRotation#rotate around the origin: NONE, CLOCKWISE_90, CLOCKWISE_180, COUNTERCLOCKWISE_90

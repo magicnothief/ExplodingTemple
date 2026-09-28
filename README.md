@@ -25,8 +25,8 @@ gradlew.bat run --args="0 281474976710656 1000"      (Windows)
 The arguments are the first base seed, the base seed to stop before (281474976710656 is the end, so it runs until
 you stop it), how far the temple may be from the world spawn in blocks (1000 by default), and optionally the number
 of threads (all cores by default). There is no minimum: every temple found within the distance is a result. A
-smaller distance only checks temples closer to 0 0 and gets through base seeds faster: on 4 cores, 300 blocks went
-through about 4 times as many base seeds per second as 1000.
+smaller distance only checks temples closer to 0 0 and gets through base seeds faster: with 300 blocks each core
+got through about 4 times as many base seeds per second as with 1000.
 
 Each result is printed as it is found and kept in `results.txt`, closest first:
 
