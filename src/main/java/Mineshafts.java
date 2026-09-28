@@ -6,9 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /*
-Mineshaft pieces near the temple. Corridors that cross the ravine put plank floors and cobwebs into it, which break
-a fall, and their air lets springs flood it. This is the 1.16.1 MineShaftPieces layout (only the bounding boxes)
-for normal mineshafts, which is what generates around deserts.
+Mineshaft pieces near the temple. The finder doesn't model what they build, so a corridor near the shaft makes its
+dripstone prediction unreliable. This is the MineShaftPieces layout (only the bounding boxes) for normal mineshafts,
+which is what generates around deserts; 1.17.1 draws the same random numbers for it as 1.16.1.
  */
 public class Mineshafts {
     // MineshaftConfiguration(0.004f, NORMAL)
@@ -36,7 +36,7 @@ public class Mineshafts {
         List<Box> boxes = new ArrayList<>();
         for (int chunkX = center.getX() - startRadius; chunkX <= center.getX() + startRadius; chunkX++) {
             for (int chunkZ = center.getZ() - startRadius; chunkZ <= center.getZ() + startRadius; chunkZ++) {
-                rand.setCarverSeed(structureSeed, chunkX, chunkZ, MCVersion.v1_16_1);
+                rand.setCarverSeed(structureSeed, chunkX, chunkZ, MCVersion.v1_17_1);
                 if (rand.nextDouble() < CHANCE) {
                     boxes.addAll(generate(structureSeed, chunkX, chunkZ));
                 }
@@ -47,7 +47,7 @@ public class Mineshafts {
 
     static List<Box> generate(long structureSeed, int chunkX, int chunkZ) {
         ChunkRand random = new ChunkRand();
-        random.setCarverSeed(structureSeed, chunkX, chunkZ, MCVersion.v1_16_1);
+        random.setCarverSeed(structureSeed, chunkX, chunkZ, MCVersion.v1_17_1);
 
         int x = (chunkX << 4) + 2;
         int z = (chunkZ << 4) + 2;

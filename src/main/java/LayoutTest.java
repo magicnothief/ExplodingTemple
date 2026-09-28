@@ -1,95 +1,42 @@
-import com.seedfinding.mccore.rand.ChunkRand;
-import com.seedfinding.mccore.util.pos.BPos;
-import com.seedfinding.mccore.util.pos.CPos;
-import com.seedfinding.mccore.version.MCVersion;
-import com.seedfinding.mcfeature.structure.PillagerOutpost;
-import profotoce59.generator.OutpostGenerator;
-
-import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 
 /*
-Sample size: 10000000
-Generated: 249185
---------------
-Pos{x=-1, y=0, z=1} : 463
-Pos{x=-2, y=0, z=0} : 476
-Pos{x=0, y=0, z=1} : 493
-Pos{x=0, y=0, z=-2} : 122
-Pos{x=-1, y=0, z=-2} : 451
-Pos{x=1, y=0, z=1} : 461
-Pos{x=1, y=0, z=-1} : 475
-Pos{x=-2, y=0, z=1} : 457
+Which chunk offsets from a 1.17.1 outpost's chunk can have a golem standing in a desert pyramid's shaft (hitbox blocks
+within 9..11 of the chunk on both axes), and with which base plate rotations, from superflat layouts of random seeds.
+The finder only lays out outposts whose pyramid is at one of these offsets with a matching rotation.
 
-Pos{x=-1, y=0, z=1} : 510
-Pos{x=-2, y=0, z=0} : 502
-Pos{x=0, y=0, z=-2} : 104
-Pos{x=0, y=0, z=1} : 488
-Pos{x=-1, y=0, z=-2} : 451
-Pos{x=1, y=0, z=1} : 430
-Pos{x=-2, y=0, z=1} : 427
-Pos{x=1, y=0, z=-1} : 488
-
-Pos{x=-1, y=0, z=1} : 528
-Pos{x=0, y=0, z=1} : 507 <-- seems most consistent, will go with that
-Pos{x=-2, y=0, z=0} : 471
-Pos{x=0, y=0, z=-2} : 119
-Pos{x=1, y=0, z=1} : 466
-Pos{x=-1, y=0, z=-2} : 520
-Pos{x=1, y=0, z=-1} : 472
-Pos{x=-2, y=0, z=1} : 469
-
-Sample size: 50000000
-Generated: 5240548
---------------
-Pos{x=-1, y=0, z=1} : 21576
-Pos{x=-2, y=0, z=0} : 21600
-Pos{x=0, y=0, z=1} : 21752 <-- still slightly higher than others
-Pos{x=0, y=0, z=-2} : 5251
-Pos{x=1, y=0, z=1} : 21557
-Pos{x=-1, y=0, z=-2} : 21577
-Pos{x=-2, y=0, z=1} : 21369
-Pos{x=1, y=0, z=-1} : 21441
+  LayoutTest [layouts] [seed]
  */
-
 public class LayoutTest {
-    /*
-    Looking for a cage_1 such that the inner 2x2 x-z box is contained within (9,9), (11,11)
-     */
     public static void main(String[] args) {
-        var rand = new ChunkRand();
-        var outpost = new PillagerOutpost(MCVersion.v1_16_1);
-        var gen = new OutpostGenerator(MCVersion.v1_16_1);
-
-        long sampleSize = 50_000_000L;
-        long generatedCount = 0;
-        HashMap<CPos, Integer> heatmap = new HashMap<>();
-
-        Random r = new Random();
-        for (long i = 0; i < sampleSize; i++) {
-            long seed = r.nextLong();
-            CPos pos = outpost.getInRegion(seed, 0, 0, rand);
-            if (pos == null) continue;
-
-            gen.generateSuperflatUnchecked(seed, pos.getX(), pos.getZ(), rand);
-            generatedCount++;
-            var goodGolem = gen.getIronGolems().stream()
-                    .filter(golem -> Utils.withinShaftFootprint(golem.minX, golem.minZ)
-                            && Utils.withinShaftFootprint(golem.maxX, golem.maxZ))
-                    .findFirst();
-
-            if (goodGolem.isPresent()) {
-                var chunkOffset = new BPos(goodGolem.get().getCenter()).toChunkPos().subtract(pos);
-                int currentCount = heatmap.getOrDefault(chunkOffset, 0);
-                heatmap.put(chunkOffset, currentCount + 1);
+        long count = args.length > 0 ? Long.parseLong(args[0]) : 10_000_000L;
+        Random random = new Random(args.length > 1 ? Long.parseLong(args[1]) : 1);
+        OutpostGolems golems = new OutpostGolems();
+        Map<String, long[]> byOffset = new TreeMap<>();
+        long withGolem = 0;
+        for (long i = 0; i < count; i++) {
+            long seed = random.nextLong() & ((1L << 48) - 1);
+            int chunkX = random.nextInt(24), chunkZ = random.nextInt(24);
+            int n = golems.layOut(seed, chunkX, chunkZ);
+            boolean found = false;
+            for (int g = 0; g < n; g++) {
+                int minX = golems.golem(g, 0), minZ = golems.golem(g, 1), maxX = golems.golem(g, 2), maxZ = golems.golem(g, 3);
+                if (Math.floorDiv(minX, 16) != Math.floorDiv(maxX, 16) || Math.floorDiv(minZ, 16) != Math.floorDiv(maxZ, 16)) continue;
+                int x0 = Math.floorMod(minX, 16), x1 = Math.floorMod(maxX, 16), z0 = Math.floorMod(minZ, 16), z1 = Math.floorMod(maxZ, 16);
+                if (x0 < 9 || x1 > 11 || z0 < 9 || z1 > 11) continue;
+                int dx = Math.floorDiv(minX, 16) - chunkX, dz = Math.floorDiv(minZ, 16) - chunkZ;
+                byOffset.computeIfAbsent(dx + " " + dz, k -> new long[4])[golems.baseRotation()]++;
+                found = true;
             }
+            if (found) withGolem++;
         }
-
-        System.out.println("Sample size: " + sampleSize);
-        System.out.println("Generated: " + generatedCount);
-        System.out.println("--------------");
-        for (var entry : heatmap.entrySet()) {
-            System.out.println(entry.getKey() + " : " + entry.getValue());
+        System.out.printf("%d layouts, %d with a golem in a shaft position%n", count, withGolem);
+        System.out.println("offset x z: golems by base plate rotation 0 1 2 3");
+        for (Map.Entry<String, long[]> e : byOffset.entrySet()) {
+            long[] c = e.getValue();
+            System.out.printf("%s: %d %d %d %d%n", e.getKey(), c[0], c[1], c[2], c[3]);
         }
     }
 }

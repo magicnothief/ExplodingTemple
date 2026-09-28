@@ -35,7 +35,7 @@ dependencies {
     implementation("dev.xpple:cubiomes:0.0.0-2026.5.18.1779128583+1a0c27a6b80f6bebbfe18b806af70fe18f33d0c4")
 }
 
-// gradlew run --args="seedMin seedMax maxSpawnDistance [threads] [worstShaftExit]", see Main
+// gradlew run --args="seedMin seedMax [maxSpawnDistance] [threads]", see Main
 application {
     mainClass = "Main"
     // cubiomes calls its native library through Java's foreign function API

@@ -3,6 +3,7 @@ package generator;
 import com.seedfinding.mccore.util.pos.BPos;
 import com.seedfinding.mccore.util.pos.CPos;
 import dev.xpple.cubiomes.*;
+import features.Decoration;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
@@ -18,19 +19,19 @@ public class CubiomesBiomeChecker implements AutoCloseable {
     private final SegmentAllocator posAllocator = SegmentAllocator.prefixAllocator(arena.allocate(Pos.layout()));
 
     public CubiomesBiomeChecker() {
-        Cubiomes.setupGenerator(generator, Cubiomes.MC_1_16_1(), 0);
+        Cubiomes.setupGenerator(generator, Cubiomes.MC_1_17_1(), 0);
     }
 
     public void applySeed(long worldSeed) {
         Cubiomes.applySeed(generator, Cubiomes.DIM_OVERWORLD(), worldSeed);
     }
 
-    // the biome 1.16 checks when deciding whether a structure can start in this chunk
+    // the biome 1.17 checks when deciding whether a structure can start in this chunk
     public int getStructureBiome(CPos chunk) {
         return Cubiomes.getBiomeAt(generator, 4, (chunk.getX() << 2) + 2, 0, (chunk.getZ() << 2) + 2);
     }
 
-    // the biome whose carvers 1.16 runs when carving this chunk
+    // the biome whose carvers 1.17 runs when carving this chunk
     public int getCarverBiome(int chunkX, int chunkZ) {
         return Cubiomes.getBiomeAt(generator, 4, chunkX << 2, 0, chunkZ << 2);
     }
@@ -39,6 +40,14 @@ public class CubiomesBiomeChecker implements AutoCloseable {
     public BPos estimateSpawn() {
         MemorySegment pos = Cubiomes.estimateSpawn(posAllocator, generator, MemorySegment.NULL);
         return new BPos(Pos.x(pos), 0, Pos.z(pos));
+    }
+
+    // what the dripstone model needs to know about how a chunk of this biome is decorated
+    public static Decoration.Biome decorationBiome(int biome) {
+        if (biome == Cubiomes.desert()) return Decoration.Biome.DESERT;
+        if (biome == Cubiomes.desert_hills() || biome == Cubiomes.desert_lakes()) return Decoration.Biome.OTHER_DESERT;
+        if (biome == Cubiomes.swamp()) return Decoration.Biome.SWAMP;
+        return Decoration.Biome.OTHER;
     }
 
     public static boolean isDesert(int biome) {

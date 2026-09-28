@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -5,17 +6,17 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Main {
     private static final long BLOCK_SIZE = 1L << 22;
 
-    // args: [seedMin] [seedMax] [maxSpawnDistance] [threads] [worstShaftExit]
-    public static void main(String[] args) throws InterruptedException {
+    // args: [seedMin] [seedMax] [maxSpawnDistance] [threads]
+    public static void main(String[] args) throws InterruptedException, IOException {
         long seedMin = args.length > 0 ? Long.parseLong(args[0]) : 0L;
-        long seedMax = args.length > 1 ? Long.parseLong(args[1]) : 1L << 40;
-        int maxSpawnDistance = args.length > 2 ? Integer.parseInt(args[2]) : 300;
+        long seedMax = args.length > 1 ? Long.parseLong(args[1]) : 1L << 48;
+        int maxSpawnDistance = args.length > 2 ? Integer.parseInt(args[2]) : 1000;
         int threads = args.length > 3 ? Integer.parseInt(args[3]) : Runtime.getRuntime().availableProcessors();
-        int worstShaftExit = args.length > 4 ? Integer.parseInt(args[4]) : DeadlyFall.DEFAULT_WORST_SHAFT_EXIT;
-        DeadlyFall.setWorstShaftExit(worstShaftExit);
 
-        System.out.printf("base seeds [%d, %d), temple within %d blocks of spawn, %d threads, deadly with the shaft"
-                + " blown open up to Y=%d%n", seedMin, seedMax, maxSpawnDistance, threads, worstShaftExit);
+        System.out.printf("Minecraft 1.17.1, base seeds [%d, %d), temple within %d blocks of spawn, %d threads%n",
+                seedMin, seedMax, maxSpawnDistance, threads);
+        int earlier = Results.load();
+        if (earlier > 0) System.out.printf("%d world seeds from earlier runs in results.txt%n", earlier);
 
         long t0 = System.nanoTime();
         AtomicLong nextBlock = new AtomicLong(seedMin);
@@ -55,9 +56,9 @@ public class Main {
 
     private static void printProgress(long t0, long seedsDone) {
         double elapsedSecs = (System.nanoTime() - t0) * 1e-9;
-        System.out.printf("[progress] %d base seeds in %.0fs (%.2fM/s), %d ravines, %d deadly structure seeds (%d dry), %d world seeds%n",
-                seedsDone, elapsedSecs, seedsDone / elapsedSecs / 1e6, ExplodingTempleFinder.ravineCount.get(),
-                ExplodingTempleFinder.structureSeedCount.get(), ExplodingTempleFinder.dryStructureSeedCount.get(),
+        System.out.printf("[progress] %d base seeds in %.0fs (%.2fM/s), %d ravines, %d structure seeds with dripstone,"
+                        + " %d world seeds%n", seedsDone, elapsedSecs, seedsDone / elapsedSecs / 1e6,
+                ExplodingTempleFinder.ravineCount.get(), ExplodingTempleFinder.structureSeedCount.get(),
                 ExplodingTempleFinder.resultCount.get());
     }
 }

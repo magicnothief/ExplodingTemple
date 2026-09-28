@@ -38,11 +38,11 @@ public class CubiomesRavineGenerator {
             MemorySegment biomesArray = arena.allocate(Cubiomes.C_INT.byteSize() * 17 * 17);
 
             Cubiomes.createPos3List(pos3ListPointer, 65536);
-            Cubiomes.getCanyonCarverConfig(Cubiomes.CANYON_CARVER(), Cubiomes.MC_1_16_1(), cccPointer);
+            Cubiomes.getCanyonCarverConfig(Cubiomes.CANYON_CARVER(), Cubiomes.MC_1_17_1(), cccPointer);
 
             Cubiomes.carveCanyon(
                     structureSeed,
-                    Cubiomes.MC_1_16_1(),
+                    Cubiomes.MC_1_17_1(),
                     chunkX, chunkZ,
                     cccPointer,
                     Cubiomes.CANYON_CARVER(),
@@ -84,7 +84,7 @@ public class CubiomesRavineGenerator {
     }
 
     public static boolean startsAt(long seed, int chunkX, int chunkZ) {
-        rand.setCarverSeed(seed + 2, chunkX, chunkZ, MCVersion.v1_16_1);
+        rand.setCarverSeed(seed + 2, chunkX, chunkZ, MCVersion.v1_17_1);
         return rand.nextFloat() < 0.01F;
     }
 

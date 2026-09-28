@@ -43,7 +43,8 @@ bin/
 # Ignore Gradle build output directory
 build
 
-### tools/explosion_test.py ###
-tools/server-1.16.1.jar
-explosion-tests/
+### the finder's results and tools/verify_dripstone.py ###
+results.txt
+tools/server-1.17.1.jar
+dripstone-tests/
 __pycache__/

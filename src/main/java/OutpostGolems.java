@@ -1,17 +1,25 @@
 import java.util.Arrays;
+import java.util.function.IntBinaryOperator;
 
 /*
-Where a pillager outpost puts its iron golems, the same as OutpostGenerator#generateSuperflatUnchecked followed by
-getIronGolems, without building any pieces. The outpost is a base plate with a watchtower and up to three feature
-plates, and each feature plate gets one feature, which is the golem's cage 1 time in 12. Those pieces are placed
-with the same random calls and collision checks as the generator, then it stops: the features themselves only
-shuffle their jigsaw blocks, which changes nothing.
+Where a 1.17.1 pillager outpost puts its iron golems, without building any pieces. The outpost is a base plate with a
+watchtower and up to three feature plates. Since 1.17 each feature plate has 15 jigsaw blocks that each try the
+features pool, so a plate gets up to 15 features (in 1.16 it had one), and each one is the golem's cage 1 time in 12.
+Those pieces are placed with the same random calls and collision checks as JigsawPlacement, then it stops: the
+features themselves only shuffle their jigsaw blocks afterwards, which changes nothing.
+
+Heights come from a function giving the first free block above the surface (WORLD_SURFACE_WG) of a column: FLAT for
+the superflat layout the finder filters with, or the real terrain. On real terrain a feature only fits on its plate
+where the ground at its jigsaw block is at most 2 blocks above the plate's own, so fewer of them generate.
  */
 public final class OutpostGolems {
     private static final long MULTIPLIER = 0x5DEECE66DL;
     private static final long ADDEND = 0xBL;
     private static final long MASK = (1L << 48) - 1;
     private static final int MAX_DEPTH = 7;
+
+    /** the superflat world: the first free block is always Y 64 */
+    public static final IntBinaryOperator FLAT = (x, z) -> 64;
 
     // directions: the horizontal ones in clockwise order, so a rotation by r clockwise quarter turns adds r
     private static final int NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3, UP = 4, DOWN = 5;
@@ -43,7 +51,7 @@ public final class OutpostGolems {
                     {FEATURE_PLATES, PLATE_ENTRY, EAST, 15, 0, 8}, {TOWERS, ENTRANCE, NORTH, 7, 1, 14},
                     {TOWERS, ENTRANCE, NORTH, 8, 1, 14}},
             {{EMPTY_POOL, ENTRANCE, SOUTH, 7, 1, 13}},
-            {{FEATURES, FEATURE, UP, 7, 0, 23}, {EMPTY_POOL, PLATE_ENTRY, EAST, 15, 0, 7}},
+            plate(1, 17, 1, 30, 2, 23, 3, 19, 3, 28, 5, 21, 5, 26, 7, 23, 9, 21, 9, 25, 11, 19, 11, 27, 12, 23, 13, 17, 13, 29),
             feature(1, 1, 1, 6, 4, 3, 6, 1, 6, 6),
             feature(1, 1, 1, 6, 4, 3, 6, 1, 6, 6),
             feature(0, 0, 0, 6, 5, 0, 5, 6),
@@ -53,6 +61,16 @@ public final class OutpostGolems {
             {}
     };
 
+    // the feature plate's jigsaw blocks, in the template's order (by y, then x, then z): the features, then the entry
+    private static int[][] plate(int... xz) {
+        int[][] jigsaws = new int[xz.length / 2 + 1][];
+        for (int i = 0; i < xz.length / 2; i++) {
+            jigsaws[i] = new int[]{FEATURES, FEATURE, UP, xz[2 * i], 0, xz[2 * i + 1]};
+        }
+        jigsaws[xz.length / 2] = new int[]{EMPTY_POOL, PLATE_ENTRY, EAST, 15, 0, 7};
+        return jigsaws;
+    }
+
     private static int[][] feature(int... xz) {
         int[][] jigsaws = new int[xz.length / 2][];
         for (int i = 0; i < jigsaws.length; i++) {
@@ -61,32 +79,46 @@ public final class OutpostGolems {
         return jigsaws;
     }
 
+    // at most a base plate, a watchtower, 3 feature plates and 15 features on each
+    private static final int MAX_PIECES = 64;
+
     private long seed;
+    private IntBinaryOperator height = FLAT;
 
     // the pieces placed so far, the base plate's children in the order they were placed
-    private final int[] template = new int[8], rotation = new int[8], depth = new int[8], shapeOf = new int[8];
-    private final boolean[] rigid = new boolean[8];
-    private final int[][] pos = new int[8][3], box = new int[8][6];
+    private final int[] template = new int[MAX_PIECES], rotation = new int[MAX_PIECES], depth = new int[MAX_PIECES],
+            shapeOf = new int[MAX_PIECES];
+    private final boolean[] rigid = new boolean[MAX_PIECES];
+    private final int[][] pos = new int[MAX_PIECES][3], box = new int[MAX_PIECES][6];
     private int pieceCount;
 
     // collision shapes: bounds (min inclusive, max exclusive) and the boxes placed in them (max exclusive)
     private final int[][] shapeBounds = new int[8][6];
-    private final int[][] shapeBoxes = new int[8][6 * 8];
+    private final int[][] shapeBoxes = new int[8][6 * 20];
     private final int[] shapeBoxCount = new int[8];
     private int shapeCount;
 
-    // cage 1 golems found: minX, minZ, maxX, maxZ
-    private final int[] golems = new int[4 * 3];
+    // cage 1 golems found: minX, minZ, maxX, maxZ of their hitbox blocks, and the cage's bottom Y
+    private final int[] golems = new int[5 * 45];
     private int golemCount;
 
     // scratch
     private final int[] rotations = new int[4];
     private final int[] templates = new int[12];
-    private final int[][] jigsaws = new int[5][6];
-    private final int[][] childJigsaws = new int[5][6];
+    private final int[][] jigsaws = new int[16][6];
+    private final int[][] childJigsaws = new int[16][6];
 
-    /** Lays out the outpost starting in the chunk and returns how many golems it has, see {@link #golem}. */
+    /** Lays out the outpost starting in the chunk on superflat ground, see {@link #layOut(long, int, int, IntBinaryOperator)}. */
     public int layOut(long structureSeed, int chunkX, int chunkZ) {
+        return layOut(structureSeed, chunkX, chunkZ, FLAT);
+    }
+
+    /**
+     * Lays out the outpost starting in the chunk on ground with the given first free heights and returns how many
+     * golems it has, see {@link #golem}.
+     */
+    public int layOut(long structureSeed, int chunkX, int chunkZ, IntBinaryOperator firstFreeHeight) {
+        height = firstFreeHeight;
         startLayout(structureSeed, chunkX, chunkZ);
         // breadth first: the base plate, then its children in order. Only the feature plates' children matter.
         for (int i = 0; i < pieceCount; i++) {
@@ -114,43 +146,48 @@ public final class OutpostGolems {
         int[] baseBox = boundingBox(chunkX << 4, 0, chunkZ << 4, baseRotation, SIZE[BASE_PLATE]);
         int centerX = (baseBox[0] + baseBox[3]) / 2;
         int centerZ = (baseBox[2] + baseBox[5]) / 2;
-        int shiftY = 64 - (baseBox[1] + 1);
+        int y = height.applyAsInt(centerX, centerZ);
+        int shiftY = y - (baseBox[1] + 1);
         baseBox[1] += shiftY;
         baseBox[4] += shiftY;
 
-        int global = newShape(centerX - 80, 64 - 80, centerZ - 80, centerX + 80 + 1, 64 + 80 + 1, centerZ + 80 + 1);
+        int global = newShape(centerX - 80, y - 80, centerZ - 80, centerX + 80 + 1, y + 80 + 1, centerZ + 80 + 1);
         addBox(global, baseBox[0], baseBox[1], baseBox[2], baseBox[3] + 1, baseBox[4] + 1, baseBox[5] + 1);
         int base = addPiece(BASE_PLATE, chunkX << 4, shiftY, chunkZ << 4, baseBox, baseRotation, true, 0);
         shapeOf[base] = global;
     }
 
-    /** minX, minZ, maxX, maxZ of the golem's hitbox blocks */
+    /** the base plate's rotation in the last layout, the first nextInt(4) after the carver seed */
+    public int baseRotation() {
+        return rotation[0];
+    }
+
+    /** minX, minZ, maxX, maxZ of the golem's hitbox blocks (coordinate 0 to 3), or the Y of its cage's bottom (4) */
     public int golem(int index, int coordinate) {
-        return golems[4 * index + coordinate];
+        return golems[5 * index + coordinate];
     }
 
     /**
-     * Whether the outpost starting in the chunk has a golem whose hitbox blocks are all within x0..x1, z0..z1. Same
-     * as looking through {@link #layOut}, but only lays out the feature plates up to the last one close enough.
+     * Whether the outpost starting in the chunk, on superflat ground, has a golem whose hitbox blocks are all within
+     * x0..x1, z0..z1. Same as looking through {@link #layOut}, but only lays out the feature plates up to the last one
+     * close enough, and stops at the first such golem.
      */
     public boolean hasGolemIn(long structureSeed, int chunkX, int chunkZ, int x0, int z0, int x1, int z1) {
+        height = FLAT;
         startLayout(structureSeed, chunkX, chunkZ);
         tryPlacing(0);
-        // a cage's golem is at most 3 blocks from the block above the plate's feature jigsaw it hangs from
+        // a cage's golem is at most 4 blocks outside the plate it hangs from
         int last = -1;
         for (int i = 1; i < pieceCount; i++) {
             if (template[i] != FEATURE_PLATE) continue;
-            int[] jigsaw = JIGSAWS[FEATURE_PLATE][0];
-            int x = rotateX(jigsaw[3], jigsaw[5], rotation[i]) + pos[i][0];
-            int z = rotateZ(jigsaw[3], jigsaw[5], rotation[i]) + pos[i][2];
-            if (x + 3 >= x0 && x - 3 <= x1 && z + 3 >= z0 && z - 3 <= z1) last = i;
+            int[] b = box[i];
+            if (b[0] - 4 <= x1 && b[3] + 4 >= x0 && b[2] - 4 <= z1 && b[5] + 4 >= z0) last = i;
         }
         for (int i = 1; i <= last; i++) {
             if (template[i] != FEATURE_PLATE) continue;
             int before = golemCount;
             tryPlacing(i);
-            if (golemCount > before) {
-                int g = 4 * before;
+            for (int g = 5 * before; g < 5 * golemCount; g += 5) {
                 if (golems[g] >= x0 && golems[g + 2] <= x1 && golems[g + 1] >= z0 && golems[g + 3] <= z1) return true;
             }
         }
@@ -215,7 +252,7 @@ public final class OutpostGolems {
                         if (isRigid && POOL_RIGID[pool]) {
                             i2 = minY + y - k1 + VECTOR[front][1];
                         } else {
-                            if (state == -1) state = 64;
+                            if (state == -1) state = height.applyAsInt(jigsaw[3], jigsaw[5]);
                             i2 = state - k1;
                         }
                         int shiftY = i2 - placedBox[1];
@@ -247,10 +284,11 @@ public final class OutpostGolems {
         int r = rotation[cage];
         int x1 = rotateX(3, 3, r) + p[0], z1 = rotateZ(3, 3, r) + p[2];
         int x2 = rotateX(4, 4, r) + p[0], z2 = rotateZ(4, 4, r) + p[2];
-        golems[4 * golemCount] = Math.min(x1, x2);
-        golems[4 * golemCount + 1] = Math.min(z1, z2);
-        golems[4 * golemCount + 2] = Math.max(x1, x2);
-        golems[4 * golemCount + 3] = Math.max(z1, z2);
+        golems[5 * golemCount] = Math.min(x1, x2);
+        golems[5 * golemCount + 1] = Math.min(z1, z2);
+        golems[5 * golemCount + 2] = Math.max(x1, x2);
+        golems[5 * golemCount + 3] = Math.max(z1, z2);
+        golems[5 * golemCount + 4] = box[cage][1];
         golemCount++;
     }
 
@@ -438,6 +476,6 @@ public final class OutpostGolems {
 
     @Override
     public String toString() {
-        return Arrays.toString(Arrays.copyOf(golems, 4 * golemCount));
+        return Arrays.toString(Arrays.copyOf(golems, 5 * golemCount));
     }
 }

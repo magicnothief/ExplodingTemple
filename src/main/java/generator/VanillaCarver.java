@@ -10,10 +10,12 @@ import java.util.Random;
 import java.util.function.IntBinaryOperator;
 
 /*
-A port of the 1.16.1 cave and ravine carvers (WorldCarver, CaveWorldCarver, CanyonWorldCarver and the underwater
-ones ocean chunks get). Unlike cubiomes it knows the terrain, which matters next to rivers and oceans: the game
-skips every sphere of a cave whose box touches water, and in ocean chunks the underwater carvers fill everything
-they carve below sea level with water.
+A port of the 1.17.1 cave and ravine carvers (WorldCarver, CaveWorldCarver, CanyonWorldCarver and the underwater
+ones ocean chunks get). They draw the same random numbers as 1.16.1's, except that a ravine's length is now a float
+fraction of the range and its radii shrink by float factors. Unlike cubiomes it knows the terrain, which matters
+next to rivers and oceans: the game skips every sphere of a cave whose box touches water, and in ocean chunks the
+underwater carvers fill everything they carve below sea level with water. Compared against the vanilla server it
+got 99.93% of the blocks below Y=60 right; the rest is the bedrock at Y 2 to 4, which carvers can't replace.
  */
 public final class VanillaCarver {
     private static final int SEA_LEVEL = 63;
@@ -61,14 +63,17 @@ public final class VanillaCarver {
                 Block[] column = terrain.getColumnAt(minX + x, minZ + z);
                 long[] solid = new long[4];
                 long[] wet = new long[4];
+                int top = 0;
                 for (int y = 0; y < GEN_HEIGHT && y < column.length; y++) {
                     if (column[y].getId() == Blocks.WATER.getId()) {
                         wet[y >> 6] |= 1L << y;
                         region.setWater(minX + x, y, minZ + z);
                     } else if (column[y].getId() != Blocks.AIR.getId()) {
                         solid[y >> 6] |= 1L << y;
+                        top = y + 1;
                     }
                 }
+                region.setGround(minX + x, minZ + z, top);
                 stone[x * size + z] = solid;
                 water[x * size + z] = wet;
             }
@@ -77,7 +82,7 @@ public final class VanillaCarver {
 
     /*
     Carves a square of chunks around center for the world seed the terrain generator was made for. carverBiome
-    gives the biome at the corner of each chunk, the one 1.16 picks the carvers of that chunk by.
+    gives the biome at the corner of each chunk, the one the game picks the carvers of that chunk by.
      */
     public static CarveRegion carve(long worldSeed, CPos center, int chunkRadius, TerrainGenerator terrain,
                                     IntBinaryOperator carverBiome) {
@@ -91,13 +96,14 @@ public final class VanillaCarver {
         return region;
     }
 
-    // ChunkGenerator#applyCarvers for the AIR and then the LIQUID step
+    // ChunkGenerator#applyCarvers for the AIR and then the LIQUID step. Since 1.17 the carvers of a cave come from
+    // the biome of the chunk it starts in (in 1.16 from the biome of the chunk being carved)
     private void carveChunk(int chunkX, int chunkZ) {
-        boolean ocean = CubiomesBiomeChecker.isOcean(carverBiome.applyAsInt(chunkX, chunkZ));
         Random random = new Random();
         BitSet mask = new BitSet(16 * 16 * GEN_HEIGHT);
         for (int x = chunkX - 8; x <= chunkX + 8; x++) {
             for (int z = chunkZ - 8; z <= chunkZ + 8; z++) {
+                boolean ocean = CubiomesBiomeChecker.isOcean(carverBiome.applyAsInt(x, z));
                 setLargeFeatureSeed(random, seed, x, z);
                 if (random.nextFloat() <= (ocean ? OCEAN_CAVE_CHANCE : CAVE_CHANCE)) {
                     cave(random, x, z, chunkX, chunkZ, mask, false);
@@ -108,11 +114,11 @@ public final class VanillaCarver {
                 }
             }
         }
-        if (!ocean) return;
 
         mask = new BitSet(16 * 16 * GEN_HEIGHT);
         for (int x = chunkX - 8; x <= chunkX + 8; x++) {
             for (int z = chunkZ - 8; z <= chunkZ + 8; z++) {
+                if (!CubiomesBiomeChecker.isOcean(carverBiome.applyAsInt(x, z))) continue;
                 setLargeFeatureSeed(random, seed, x, z);
                 if (random.nextFloat() <= CANYON_CHANCE) {
                     canyon(random, x, z, chunkX, chunkZ, mask, true);
@@ -195,7 +201,12 @@ public final class VanillaCarver {
         }
     }
 
-    // CanyonWorldCarver#carve and #genCanyon
+    // Mth#randomBetween, how UniformFloat samples
+    private static float randomBetween(Random random, float min, float max) {
+        return random.nextFloat() * (max - min) + min;
+    }
+
+    // CanyonWorldCarver#carve and #doCarve with the vanilla canyon configuration
     private void canyon(Random startRandom, int startX, int startZ, int chunkX, int chunkZ, BitSet mask, boolean liquid) {
         double x = startX * 16 + startRandom.nextInt(16);
         double y = startRandom.nextInt(startRandom.nextInt(40) + 8) + 20;
@@ -203,7 +214,7 @@ public final class VanillaCarver {
         float yaw = startRandom.nextFloat() * ((float) Math.PI * 2);
         float pitch = (startRandom.nextFloat() - 0.5f) * 2.0f / 8.0f;
         float thickness = (startRandom.nextFloat() * 2.0f + startRandom.nextFloat()) * 2.0f;
-        int branchCount = RANGE - startRandom.nextInt(RANGE / 4);
+        int branchCount = (int) ((float) RANGE * randomBetween(startRandom, 0.75f, 1.0f));
         long seed = startRandom.nextLong();
 
         Random random = new Random(seed);
@@ -222,8 +233,8 @@ public final class VanillaCarver {
         for (int i = 0; i < branchCount; i++) {
             double horizontalRadius = 1.5 + (double) (sin((float) i * (float) Math.PI / (float) branchCount) * thickness);
             double verticalRadius = horizontalRadius * 3.0;
-            horizontalRadius *= (double) random.nextFloat() * 0.25 + 0.75;
-            verticalRadius *= (double) random.nextFloat() * 0.25 + 0.75;
+            horizontalRadius *= (double) randomBetween(random, 0.75f, 1.0f);
+            verticalRadius *= (double) randomBetween(random, 0.75f, 1.0f);
             float horizontal = cos(pitch);
             float vertical = sin(pitch);
             x += cos(yaw) * horizontal;
