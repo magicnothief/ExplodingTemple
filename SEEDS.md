@@ -11,33 +11,41 @@ The explosion is random, so every new world gets its own crater, and whether it 
 depends on it. How often each temple stays deadly was measured by blowing it up again and again in the
 vanilla server, see [Testing](#testing).
 
-### Temple at -166 154: deadly after 98 of 100 explosions, next to the spawn
+### Temple at -166 154: deadly after 98 of 100 explosions, 23 blocks from spawn
 
 | Seed | World spawn | Temple shaft | Distance |
 |---|---|---|---|
-| `7220991410055643117` | -155 63 144 | -166 154 | 15 blocks |
 | `1343793896337145837` | -160 64 176 | -166 154 | 23 blocks |
-| `-7008413087598149651` | -160 64 176 | -166 154 | 23 blocks |
-| `1733918214058115053` | -160 64 176 | -166 154 | 23 blocks |
-| `7181866388292861933` | -160 68 176 | -166 154 | 23 blocks |
-| `-5233994834414174227` | -160 64 128 | -166 154 | 27 blocks |
-| `-5580209055768281107` | -192 63 160 | -166 154 | 27 blocks |
-| `964928577684602861` | -192 63 160 | -166 154 | 27 blocks |
-| `4004576851182977005` | -176 59 180 | -166 154 | 28 blocks |
 | `-3365000989055418387` | -144 66 176 | -166 154 | 31 blocks |
+| `-2123414866784714771` | -144 70 192 | -166 154 | 44 blocks |
+| `-1863613463280779283` | -112 67 160 | -166 154 | 54 blocks |
+| `-2134673865853141011` | -128 71 192 | -166 154 | 54 blocks |
+| `-465527253958950931` | -112 67 160 | -166 154 | 54 blocks |
+| `-5018103527277101075` | -112 67 160 | -166 154 | 54 blocks |
+| `870352985509822445` | -112 67 166 | -166 154 | 55 blocks |
+| `2181463427028058093` | -112 69 176 | -166 154 | 58 blocks |
 
 The best temple found so far. `1343793896337145837` turned up in a search with
 `Main 1090481291264 281474976710656 50 12 55`, and in 100 explosions with `tools/explosion_test.py` 98 were
 deadly. It is structure seed `32357520474093` from base seed `32015647345381`:
 `Main 32015647345381 32015647345382 300 1 55` lists 500 sister seeds with the spawn within 300 blocks of the
 temple, all deadly with the shaft blown open up to Y=55. They share the temple, the outpost and the ravine, with a
-lava lake under the shaft; biomes and the spawn point differ. The spawns of the first two seeds are the real ones from the vanilla
-server (the finder put the first one at -160 57 144, 12 blocks away); the others are the finder's.
+lava lake under the shaft.
 
-The temple is inside the spawn chunks, so it blows up within seconds of the world being created, before a player
-can get there. In fresh worlds of the first two seeds the golem was on the pressure plate 2 seconds after the
-server finished starting and the TNT went off right after. Both craters were deadly: the shaft open from Y 54,
-no water or cobwebs, and the nearest spot to land on 0.56 and 1.33 blocks out of reach.
+Their biomes differ, though, and the biome of a chunk decides which lakes, ores, gravel and springs it gets and
+shapes its ground. The seeds in the table have the same biomes as `1343793896337145837` in every chunk whose
+features or ground reach the crater and the fall below it (the temple's chunk, the one north-west of it and the
+ones up to two chunks east and south of it), so the rock, ores, gravel and water around the crater come out the
+same and the 98 of 100 applies to them too: 88 of the 500 sister seeds are like that, and these are the closest. The other sister seeds
+have to be measured on their own. `7220991410055643117` has its spawn only 15 blocks from the shaft (-155 63 144,
+the finder put it 12 blocks away), but the chunk north-east of the temple is plains there instead of desert, and
+only 91 of its 100 explosions were deadly.
+
+The spawn of the first seed is the real one from the vanilla server; the others are the finder's. The temple is
+inside the spawn chunks, so it blows up within seconds of the world being created, before a player can get there.
+In fresh worlds of `1343793896337145837` and `7220991410055643117` the golem was on the pressure plate 2 seconds
+after the server finished starting and the TNT went off right after. Both craters were deadly: the shaft open from
+Y 54, no water or cobwebs, and the nearest spot to land on 0.56 and 1.33 blocks out of reach.
 
 ### Temple at -198 170: deadly after 98 of 100 explosions
 
@@ -106,7 +114,8 @@ gets its own explosion. The spots a perfect strafer could reach were:
 Each seed in the tables for the temples at -198 170 and 298 -486 was generated in the vanilla 1.16.1 server, with
 the 9x9 chunks around the temple force-loaded for 45 seconds so the golem drops and spring water has time to flow.
 Then the saved world was scanned. The TNT was gone, and no water or cobweb got anywhere a falling player can
-reach. For the temple at -166 154 the first two seeds were checked that way, left running for 40 seconds.
+reach. For the temple at -166 154, `1343793896337145837` and `7220991410055643117` were checked that way, left
+running for 40 seconds.
 
 To see how often the explosion leaves something to land on, each temple was also generated with its chunks
 loaded but not ticking, so the golem hadn't dropped yet, and the world was saved. Then the temple was blown
